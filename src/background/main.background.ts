@@ -419,7 +419,6 @@ export default class MainBackground {
       this.vaultTimeoutService
     );
     this.notificationBackground = new NotificationBackground(
-      this,
       this.autofillService,
       this.cipherService,
       this.vaultTimeoutService,
