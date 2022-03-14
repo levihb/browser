@@ -591,7 +591,7 @@ export default class MainBackground {
     }
 
     await this.setIcon();
-    await this.refreshBadgeAndMenu();
+    await this.refreshBadgeAndMenu(true);
     await this.reseedStorage();
     this.notificationsService.updateConnection(false);
     await this.systemService.clearPendingClipboard();
