@@ -118,6 +118,8 @@ export default class RuntimeBackground {
         await this.main.reseedStorage();
         break;
       case "collectPageDetailsResponse":
+        console.log("processMessage msg", msg);
+        console.log("processMessage sender", sender);
         switch (msg.sender) {
           case "autofiller":
           case "autofill_cmd": {
