@@ -7,10 +7,21 @@ export default class TabsBackground {
     private notificationBackground: NotificationBackground
   ) {}
 
+  private focusedWindowId: number;
+
   async init() {
     if (!chrome.tabs) {
       return;
     }
+
+    chrome.windows.onFocusChanged.addListener(async (windowId: number) => {
+      if (windowId === null || windowId < 0) {
+        return;
+      }
+
+      this.focusedWindowId = windowId;
+      this.main.messagingService.send("windowChanged");
+    });
 
     chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo) => {
       await this.main.refreshBadgeAndMenu();
@@ -29,6 +40,10 @@ export default class TabsBackground {
 
     chrome.tabs.onUpdated.addListener(
       async (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
+        // console.log("tab onUpdated focusWindowId", this.focusedWindowId);
+        if (this.focusedWindowId > 0 && tab.windowId != this.focusedWindowId) {
+          return;
+        }
         if (this.main.onUpdatedRan) {
           return;
         }

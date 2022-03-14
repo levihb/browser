@@ -93,7 +93,6 @@ import NotificationBackground from "./notification.background";
 import RuntimeBackground from "./runtime.background";
 import TabsBackground from "./tabs.background";
 import WebRequestBackground from "./webRequest.background";
-import WindowsBackground from "./windows.background";
 
 export default class MainBackground {
   messagingService: MessagingServiceAbstraction;
@@ -148,7 +147,6 @@ export default class MainBackground {
   private runtimeBackground: RuntimeBackground;
   private tabsBackground: TabsBackground;
   private webRequestBackground: WebRequestBackground;
-  private windowsBackground: WindowsBackground;
 
   private sidebarAction: any;
   private buildingContextMenu: boolean;
@@ -447,7 +445,6 @@ export default class MainBackground {
       this.cipherService,
       this.vaultTimeoutService
     );
-    this.windowsBackground = new WindowsBackground(this);
 
     this.twoFactorService = new TwoFactorService(this.i18nService, this.platformUtilsService);
 
@@ -494,7 +491,6 @@ export default class MainBackground {
     await this.contextMenusBackground.init();
     await this.idleBackground.init();
     await this.webRequestBackground.init();
-    await this.windowsBackground.init();
 
     if (this.platformUtilsService.isFirefox() && !this.isPrivateMode) {
       // Set Private Mode windows to the default icon - they do not share state with the background page
