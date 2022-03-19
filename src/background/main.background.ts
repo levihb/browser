@@ -744,7 +744,6 @@ export default class MainBackground {
       return;
     }
 
-    //TODO: This can possibly just be set once instead of every time or only set it when the actual text gets set.
     this.actionSetBadgeBackgroundColor(chrome.browserAction);
     this.actionSetBadgeBackgroundColor(this.sidebarAction);
 
@@ -796,7 +795,6 @@ export default class MainBackground {
       );
     }
 
-    //TODO Do we need to loop over all tabs?
     const tabs = await BrowserApi.getActiveTabs();
     if (tabs != null) {
       tabs.forEach((tab) => {

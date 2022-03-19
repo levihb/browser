@@ -24,7 +24,6 @@ export default class TabsBackground {
     });
 
     chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo) => {
-      console.log("tab onActiviated refreshBadgeAndMenu", activeInfo);
       await this.main.refreshBadgeAndMenu();
       this.main.messagingService.send("tabChanged");
     });
@@ -34,21 +33,17 @@ export default class TabsBackground {
         return;
       }
       this.main.onReplacedRan = true;
+
       await this.notificationBackground.checkNotificationQueue();
-      console.log("tab onReplaced refreshBadgeAndMenu");
       await this.main.refreshBadgeAndMenu();
       this.main.messagingService.send("tabChanged");
     });
 
     chrome.tabs.onUpdated.addListener(
       async (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
-        // console.log("tab onUpdated focusWindowId", this.focusedWindowId);
         if (this.focusedWindowId > 0 && tab.windowId != this.focusedWindowId) {
           return;
         }
-        // console.log("tab onUpdated windowId", tab.windowId);
-        // console.log("tab onUpdated tabId", tab.id);
-
         const activeTab = await this.getActiveTabFromCurrentWindow();
         if (activeTab != null && activeTab.id !== tabId) {
           return;
@@ -58,8 +53,6 @@ export default class TabsBackground {
           return;
         }
         this.main.onUpdatedRan = true;
-        // console.log("tab onUpdated activeTab", activeTab);
-        // console.log("tab onUpdated refreshBadgeAndMenu", changeInfo);
 
         await this.notificationBackground.checkNotificationQueue(tab);
         await this.main.refreshBadgeAndMenu();
