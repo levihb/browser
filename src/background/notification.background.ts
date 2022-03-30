@@ -1,7 +1,8 @@
+import { AuthService } from "jslib-common/abstractions/auth.service";
 import { CipherService } from "jslib-common/abstractions/cipher.service";
 import { FolderService } from "jslib-common/abstractions/folder.service";
 import { PolicyService } from "jslib-common/abstractions/policy.service";
-import { VaultTimeoutService } from "jslib-common/abstractions/vaultTimeout.service";
+import { AuthenticationStatus } from "jslib-common/enums/authenticationStatus";
 import { CipherType } from "jslib-common/enums/cipherType";
 import { PolicyType } from "jslib-common/enums/policyType";
 import { Utils } from "jslib-common/misc/utils";
@@ -28,7 +29,7 @@ export default class NotificationBackground {
     private main: MainBackground,
     private autofillService: AutofillService,
     private cipherService: CipherService,
-    private vaultTimeoutService: VaultTimeoutService,
+    private authService: AuthService,
     private policyService: PolicyService,
     private folderService: FolderService,
     private stateService: StateService
@@ -78,7 +79,7 @@ export default class NotificationBackground {
         break;
       case "bgAddSave":
       case "bgChangeSave":
-        if (await this.vaultTimeoutService.isLocked()) {
+        if ((await this.authService.authStatus()) === AuthenticationStatus.Locked) {
           const retryMessage: LockedVaultPendingNotificationsItem = {
             commandToRetry: {
               msg: msg,
@@ -204,7 +205,7 @@ export default class NotificationBackground {
     }
 
     const disabledAddLogin = await this.stateService.getDisableAddLoginNotification();
-    if (await this.vaultTimeoutService.isLocked()) {
+    if ((await this.authService.authStatus()) === AuthenticationStatus.Locked) {
       if (disabledAddLogin) {
         return;
       }
@@ -272,7 +273,7 @@ export default class NotificationBackground {
       return;
     }
 
-    if (await this.vaultTimeoutService.isLocked()) {
+    if ((await this.authService.authStatus()) === AuthenticationStatus.Locked) {
       this.pushChangePasswordToQueue(null, loginDomain, changeData.newPassword, tab, true);
       return;
     }

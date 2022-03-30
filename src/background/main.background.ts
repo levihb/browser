@@ -32,6 +32,7 @@ import { TotpService as TotpServiceAbstraction } from "jslib-common/abstractions
 import { TwoFactorService as TwoFactorServiceAbstraction } from "jslib-common/abstractions/twoFactor.service";
 import { UserVerificationService as UserVerificationServiceAbstraction } from "jslib-common/abstractions/userVerification.service";
 import { VaultTimeoutService as VaultTimeoutServiceAbstraction } from "jslib-common/abstractions/vaultTimeout.service";
+import { AuthenticationStatus } from "jslib-common/enums/authenticationStatus";
 import { CipherRepromptType } from "jslib-common/enums/cipherRepromptType";
 import { CipherType } from "jslib-common/enums/cipherType";
 import { StateFactory } from "jslib-common/factories/stateFactory";
@@ -200,7 +201,7 @@ export default class MainBackground {
       }
     );
     this.i18nService = new I18nService(BrowserApi.getUILanguage(window));
-    this.cryptoFunctionService = new WebCryptoFunctionService(window, this.platformUtilsService);
+    this.cryptoFunctionService = new WebCryptoFunctionService(window);
     this.cryptoService = new BrowserCryptoService(
       this.cryptoFunctionService,
       this.platformUtilsService,
@@ -280,6 +281,32 @@ export default class MainBackground {
       logout: async (userId?: string) => await this.logout(false, userId),
     };
 
+    this.twoFactorService = new TwoFactorService(this.i18nService, this.platformUtilsService);
+
+    // eslint-disable-next-line
+    const that = this;
+    const backgroundMessagingService = new (class extends MessagingServiceAbstraction {
+      // AuthService should send the messages to the background not popup.
+      send = (subscriber: string, arg: any = {}) => {
+        const message = Object.assign({}, { command: subscriber }, arg);
+        that.runtimeBackground.processMessage(message, that, null);
+      };
+    })();
+    this.authService = new AuthService(
+      this.cryptoService,
+      this.apiService,
+      this.tokenService,
+      this.appIdService,
+      this.platformUtilsService,
+      backgroundMessagingService,
+      this.logService,
+      this.keyConnectorService,
+      this.environmentService,
+      this.stateService,
+      this.twoFactorService,
+      this.i18nService
+    );
+
     this.vaultTimeoutService = new VaultTimeoutService(
       this.cipherService,
       this.folderService,
@@ -292,6 +319,7 @@ export default class MainBackground {
       this.policyService,
       this.keyConnectorService,
       this.stateService,
+      this.authService,
       vaultTimeoutServiceCallbacks.locked,
       vaultTimeoutServiceCallbacks.logout
     );
@@ -311,6 +339,7 @@ export default class MainBackground {
       this.stateService,
       this.organizationService,
       this.providerService,
+      this.authService,
       async (expired: boolean) => await this.logout(expired)
     );
     this.eventService = new EventService(
@@ -318,7 +347,8 @@ export default class MainBackground {
       this.cipherService,
       this.stateService,
       this.logService,
-      this.organizationService
+      this.organizationService,
+      this.authService
     );
     this.passwordGenerationService = new PasswordGenerationService(
       this.cryptoService,
@@ -350,11 +380,11 @@ export default class MainBackground {
       this.syncService,
       this.appIdService,
       this.apiService,
-      this.vaultTimeoutService,
       this.environmentService,
       () => this.logout(true),
       this.logService,
-      this.stateService
+      this.stateService,
+      this.authService
     );
     this.popupUtilsService = new PopupUtilsService(isPrivateMode);
 
@@ -410,19 +440,20 @@ export default class MainBackground {
       this.platformUtilsService,
       this.stateService,
       this.logService,
-      this.vaultTimeoutService
+      this.authService
     );
     this.commandsBackground = new CommandsBackground(
       this,
       this.passwordGenerationService,
       this.platformUtilsService,
-      this.vaultTimeoutService
+      this.vaultTimeoutService,
+      this.authService
     );
     this.notificationBackground = new NotificationBackground(
       this,
       this.autofillService,
       this.cipherService,
-      this.vaultTimeoutService,
+      this.authService,
       this.policyService,
       this.folderService,
       this.stateService
@@ -434,7 +465,7 @@ export default class MainBackground {
       this.cipherService,
       this.passwordGenerationService,
       this.platformUtilsService,
-      this.vaultTimeoutService,
+      this.authService,
       this.eventService,
       this.totpService
     );
@@ -446,35 +477,9 @@ export default class MainBackground {
     this.webRequestBackground = new WebRequestBackground(
       this.platformUtilsService,
       this.cipherService,
-      this.vaultTimeoutService
+      this.authService
     );
     this.windowsBackground = new WindowsBackground(this);
-
-    this.twoFactorService = new TwoFactorService(this.i18nService, this.platformUtilsService);
-
-    // eslint-disable-next-line
-    const that = this;
-    const backgroundMessagingService = new (class extends MessagingServiceAbstraction {
-      // AuthService should send the messages to the background not popup.
-      send = (subscriber: string, arg: any = {}) => {
-        const message = Object.assign({}, { command: subscriber }, arg);
-        that.runtimeBackground.processMessage(message, that, null);
-      };
-    })();
-    this.authService = new AuthService(
-      this.cryptoService,
-      this.apiService,
-      this.tokenService,
-      this.appIdService,
-      this.platformUtilsService,
-      backgroundMessagingService,
-      this.logService,
-      this.keyConnectorService,
-      this.environmentService,
-      this.stateService,
-      this.twoFactorService,
-      this.i18nService
-    );
   }
 
   async bootstrap() {
@@ -529,13 +534,12 @@ export default class MainBackground {
       return;
     }
 
-    const isAuthenticated = await this.stateService.getIsAuthenticated();
-    const locked = await this.vaultTimeoutService.isLocked();
+    const authStatus = await this.authService.authStatus();
 
     let suffix = "";
-    if (!isAuthenticated) {
+    if (authStatus === AuthenticationStatus.LoggedOut) {
       suffix = "_gray";
-    } else if (locked) {
+    } else if (authStatus === AuthenticationStatus.Locked) {
       suffix = "_locked";
     }
 
@@ -753,8 +757,8 @@ export default class MainBackground {
     this.actionSetBadgeBackgroundColor(this.sidebarAction);
 
     this.menuOptionsLoaded = [];
-    const locked = await this.vaultTimeoutService.isLocked();
-    if (!locked) {
+    const authStatus = await this.authService.authStatus();
+    if (authStatus === AuthenticationStatus.Unlocked) {
       try {
         const ciphers = await this.cipherService.getAllDecryptedForUrl(url);
         ciphers.sort((a, b) => this.cipherService.sortCiphersByLastUsedThenName(a, b));
@@ -1008,7 +1012,7 @@ export default class MainBackground {
     const accounts = this.stateService.accounts.getValue();
     if (accounts != null) {
       for (const userId of Object.keys(accounts)) {
-        if (!(await this.vaultTimeoutService.isLocked(userId))) {
+        if ((await this.authService.authStatus(userId)) === AuthenticationStatus.Unlocked) {
           return;
         }
       }
