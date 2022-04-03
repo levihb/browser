@@ -5,7 +5,7 @@
   "version": "1.56.6",
   "description": "__MSG_extDesc__",
   "default_locale": "en",
-  "author": "Bitwarden Inc.",
+  "author": "PersonalWarden Inc.",
   "homepage_url": "https://bitwarden.com",
   "icons": {
     "16": "images/icon16.png",
@@ -54,7 +54,7 @@
       "19": "images/icon19.png",
       "38": "images/icon38.png"
     },
-    "default_title": "Bitwarden",
+    "default_title": "PersonalWarden",
     "default_popup": "popup/index.html"
   },
   "permissions": [
@@ -111,12 +111,12 @@
   ],
   "applications": {
     "gecko": {
-      "id": "{446900e4-71c2-419f-a6a7-df9c091e268b}",
+      "id": "{546900e4-71c2-419f-a6a7-df9c091e268b}",
       "strict_min_version": "42.0"
     }
   },
   "sidebar_action": {
-    "default_title": "Bitwarden",
+    "default_title": "PersonalWarden",
     "default_panel": "popup/index.html?uilocation=sidebar",
     "default_icon": "images/icon19.png"
   }
